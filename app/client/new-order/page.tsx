@@ -9,18 +9,19 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeft, Package, Calculator, MapPin } from "lucide-react"
+import { ArrowLeft, Package, Calculator } from "lucide-react" // MapPin removed
 import { useToast } from "@/hooks/use-toast"
 import { createOrder } from "@/lib/firestore"
-import dynamic from "next/dynamic"
-import "leaflet/dist/leaflet.css"
+// dynamic and leaflet imports removed
+// import dynamic from "next/dynamic" 
+// import "leaflet/dist/leaflet.css"
 import { Switch } from "@/components/ui/switch"
 
-// Dynamically import Leaflet map to prevent SSR issues
-const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false })
-const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false })
-const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), { ssr: false })
-const Popup = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), { ssr: false })
+// Leaflet map components imports removed
+// const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false })
+// const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false })
+// const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), { ssr: false })
+// const Popup = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), { ssr: false })
 
 interface User {
   uid: string
@@ -32,7 +33,7 @@ interface User {
 }
 
 interface FormData {
-  from: string // <-- ici, string au lieu de number
+  from: string
   to: string
   description: string
   pickupAddress: string
@@ -58,34 +59,35 @@ interface FormErrors {
 export default function NewOrderPage() {
   const [user, setUser] = useState<User | null>(null)
   const [formData, setFormData] = useState<FormData>({
-    from: "", // <-- string vide
+    from: "",
     to: "",
     description: "",
     weight: "",
     fragile: false,
     urgent: false,
     recipientName: "",
+    to: "", // Correction: 'to' était dupliqué dans l'interface mais manquant ici
     recipientPhone: "",
     pickupAddress: "",
     deliveryAddress: "",
   })
   const [formErrors, setFormErrors] = useState<FormErrors>({})
   const [loading, setLoading] = useState(false)
-  const [showMap, setShowMap] = useState(false)
-  const [driverLocation, setDriverLocation] = useState<[number, number]>([3.848, 11.502]) // Default: Yaoundé
+  // const [showMap, setShowMap] = useState(false) // Removed
+  // const [driverLocation, setDriverLocation] = useState<[number, number]>([3.848, 11.502]) // Default: Yaoundé - Removed
   const router = useRouter()
   const { toast } = useToast()
 
-  // Simulate driver location updates (replace with real WebSocket/polling in production)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDriverLocation((prev) => [
-        prev[0] + (Math.random() - 0.5) * 0.01,
-        prev[1] + (Math.random() - 0.5) * 0.01,
-      ])
-    }, 5000)
-    return () => clearInterval(interval)
-  }, [])
+  // Simulate driver location updates (replace with real WebSocket/polling in production) - Removed
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     setDriverLocation((prev) => [
+  //       prev[0] + (Math.random() - 0.5) * 0.01,
+  //       prev[1] + (Math.random() - 0.5) * 0.01,
+  //     ])
+  //   }, 5000)
+  //   return () => clearInterval(interval)
+  // }, [])
 
   // Check user authentication
   useEffect(() => {
@@ -441,8 +443,8 @@ export default function NewOrderPage() {
               </CardContent>
             </Card>
 
-            {/* Driver Location Map */}
-            <Card>
+            {/* Driver Location Map section removed */}
+            {/* <Card>
               <CardHeader>
                 <CardTitle className="flex items-center text-lg">
                   <MapPin className="h-5 w-5 mr-2" />
@@ -475,7 +477,7 @@ export default function NewOrderPage() {
                   </div>
                 )}
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
 
           {/* Estimation du prix */}

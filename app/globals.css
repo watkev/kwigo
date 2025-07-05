@@ -2,71 +2,92 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-  }
+/* Removed @layer base directives to resolve the compilation error.
+   The custom properties are now defined globally. */
+:root {
+  /* Palette claire: Bleu professionnel et gris doux */
+  --background: 0 0% 100%; /* Blanc pur */
+  --foreground: 220 10% 20%; /* Gris très foncé pour le texte */
 
-  .dark {
-    /* Thème sombre bleu personnalisé */
-    --background: 224 71% 4%;
-    --foreground: 213 31% 91%;
-    --card: 224 71% 4%;
-    --card-foreground: 213 31% 91%;
-    --popover: 224 71% 4%;
-    --popover-foreground: 213 31% 91%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 84% 4.9%;
-    --secondary: 215 25% 27%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 215 25% 27%;
-    --muted-foreground: 217.9 10.6% 64.9%;
-    --accent: 215 25% 27%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 215 25% 27%;
-    --input: 215 25% 27%;
-    --ring: 216 34% 17%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-  }
+  --card: 0 0% 100%;
+  --card-foreground: 220 10% 20%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 10% 20%;
+
+  --primary: 210 90% 40%; /* Bleu professionnel principal */
+  --primary-foreground: 0 0% 100%; /* Texte blanc sur le bleu */
+
+  --secondary: 210 10% 90%; /* Gris clair pour les éléments secondaires */
+  --secondary-foreground: 220 10% 20%;
+
+  --muted: 210 10% 95%; /* Gris très clair pour les fonds discrets */
+  --muted-foreground: 210 5% 45%; /* Gris moyen pour le texte discret */
+
+  --accent: 210 90% 40%; /* L'accent utilise la couleur primaire pour la cohérence */
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 84.2% 60.2%; /* Rouge standard pour les actions destructives */
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 210 10% 85%; /* Bordures gris clair */
+  --input: 210 10% 85%; /* Entrées gris clair */
+  --ring: 210 90% 40%; /* Anneau de focus bleu primaire */
+
+  --radius: 0.5rem;
+
+  /* Couleurs de graphique simplifiées */
+  --chart-1: 210 90% 40%; /* Bleu primaire */
+  --chart-2: 210 10% 60%; /* Gris bleuté */
+  --chart-3: 210 5% 45%; /* Gris foncé */
+  --chart-4: 210 90% 55%; /* Bleu plus clair */
+  --chart-5: 210 10% 90%; /* Gris très clair */
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+.dark {
+  /* Palette sombre: Bleu professionnel foncé et gris clair */
+  --background: 210 10% 15%; /* Gris très foncé bleuté */
+  --foreground: 210 10% 90%; /* Gris clair pour le texte */
+
+  --card: 210 10% 15%;
+  --card-foreground: 210 10% 90%;
+
+  --popover: 210 10% 15%;
+  --popover-foreground: 210 10% 90%;
+
+  --primary: 210 90% 60%; /* Bleu professionnel plus clair pour le thème sombre */
+  --primary-foreground: 210 10% 10%; /* Texte très foncé sur le bleu */
+
+  --secondary: 210 5% 30%; /* Gris moyen foncé pour les éléments secondaires */
+  --secondary-foreground: 210 10% 90%;
+
+  --muted: 210 5% 25%; /* Gris plus foncé pour les fonds discrets */
+  --muted-foreground: 210 5% 60%; /* Gris moyen clair pour le texte discret */
+
+  --accent: 210 90% 60%; /* L'accent utilise la couleur primaire pour la cohérence */
+  --accent-foreground: 210 10% 10%;
+
+  --destructive: 0 62.8% 40.6%; /* Rouge standard pour les actions destructives */
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 210 5% 35%; /* Bordures gris foncé */
+  --input: 210 5% 35%; /* Entrées gris foncé */
+  --ring: 210 90% 60%; /* Anneau de focus bleu primaire */
+
+  /* Couleurs de graphique simplifiées pour le thème sombre */
+  --chart-1: 210 90% 60%; /* Bleu primaire */
+  --chart-2: 210 10% 40%; /* Gris bleuté */
+  --chart-3: 210 5% 70%; /* Gris clair */
+  --chart-4: 210 90% 75%; /* Bleu très clair */
+  --chart-5: 210 5% 25%; /* Gris très foncé */
+}
+
+* {
+  border-color: var(--border);
+}
+body {
+  background-color: var(--background);
+  color: var(--foreground);
 }
 
 /* Transitions fluides pour le changement de thème */

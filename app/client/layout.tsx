@@ -1,55 +1,38 @@
-"use client"
+// app/layout.tsx (Votre Root Layout)
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import { ThemeProvider } from "@/components/theme-provider"; // Si vous utilisez un ThemeProvider
+// Update the import path if the providers folder is outside 'client', e.g. '../providers/auth-provider'
+import { AuthProvider } from "../providers/auth-provider"; // <-- Importez AuthProvider ici
+import { Toaster } from "@/components/ui/toaster"; // Si vous utilisez un Toaster
 
-import type React from "react"
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Loader2 } from "lucide-react"
+const inter = Inter({ subsets: ["latin"] });
 
-interface ClientLayoutProps {
-  children: React.ReactNode
-}
+export const metadata: Metadata = {
+  title: "Kwigo - Livraison Express",
+  description: "Simplifiez vos livraisons avec Kwigo",
+};
 
-export default function ClientLayout({ children }: ClientLayoutProps) {
-  const [isLoading, setIsLoading] = useState(true)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const router = useRouter()
-
-  useEffect(() => {
-    // Simuler une vérification d'authentification
-    const checkAuth = () => {
-      // Pour les tests, on considère que l'utilisateur est authentifié
-      setIsAuthenticated(true)
-      setIsLoading(false)
-    }
-
-    checkAuth()
-  }, [router])
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Chargement...</span>
-        </div>
-      </div>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Accès non autorisé</h2>
-          <p className="text-muted-foreground">Vous devez être connecté pour accéder à cette page.</p>
-        </div>
-      </div>
-    )
-  }
-
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <div className="min-h-screen bg-background">
-      <main>{children}</main>
-    </div>
-  )
+    <html lang="fr" suppressHydrationWarning>
+      <body className={inter.className}>
+        <AuthProvider> {/* <-- Enveloppez toute l'application avec AuthProvider */}
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children} {/* Tous vos layouts et pages, y compris ClientLayout, seront rendus ici */}
+            <Toaster /> {/* Votre Toaster, si utilisé */}
+          </ThemeProvider>
+        </AuthProvider>
+      </body>
+    </html>
+  );
 }

@@ -1,3 +1,4 @@
+// app/driver/dashboard/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -5,10 +6,23 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Package, MapPin, Clock, User, Settings, LogOut, CheckCircle, Eye, Calculator } from "lucide-react";
+import {
+  Package,
+  MapPin,
+  Clock,
+  User,
+  Settings,
+  LogOut,
+  CheckCircle,
+  Eye,
+  Calculator,
+  Bot, // Importez l'icône Bot pour l'IA
+  MessageCircle, // Importez l'icône MessageCircle pour l'IA
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { getAvailableOrders, getOrdersByDriver, updateOrderStatus } from "@/lib/firestore";
+import AINavigation from "@/components/ai/ai-navigation"; // <-- NOUVEL IMPORT : Composant AINavigation
 
 // Define the Order type for better type safety
 type Order = {
@@ -28,6 +42,9 @@ type Order = {
   createdAt: any;
   urgent?: boolean;
   fragile?: boolean;
+  // Ajoutez d'autres champs si nécessaire (par exemple, driverId, driverName)
+  driverId?: string;
+  driverName?: string;
 };
 
 export default function DriverDashboard() {
@@ -44,8 +61,11 @@ export default function DriverDashboard() {
       return;
     }
 
+    // Redirection si l'utilisateur n'est pas un chauffeur
     if (user && user.role !== "driver") {
-      router.push("/auth/login");
+      // Optionnel: vous pouvez rediriger vers le tableau de bord client s'il existe
+      // router.push("/client/dashboard");
+      router.push("/auth/login"); // Ou une page d'erreur/non autorisé
       return;
     }
 
@@ -65,6 +85,7 @@ export default function DriverDashboard() {
       // Load available orders
       console.log("Chargement des commandes disponibles...");
       let available = await getAvailableOrders();
+      // Filtrer pour s'assurer que les prix sont valides avant de définir
       available = available.filter((order) => order.id && order.price != null && !isNaN(order.price));
       console.log("Commandes disponibles récupérées:", available);
       console.log("Nombre de commandes disponibles:", available.length);
@@ -72,6 +93,7 @@ export default function DriverDashboard() {
       // Load my orders
       console.log("Chargement des commandes du chauffeur...");
       let myOrdersData = await getOrdersByDriver(user.uid);
+      // Filtrer pour s'assurer que les prix sont valides avant de définir
       myOrdersData = myOrdersData.filter((order) => order.id && order.price != null && !isNaN(order.price));
       console.log("Mes commandes récupérées:", myOrdersData);
       console.log("Nombre de mes commandes:", myOrdersData.length);
@@ -99,40 +121,55 @@ export default function DriverDashboard() {
   };
 
   const handleAcceptOrder = async (orderId: string | undefined) => {
-    if (!user || !orderId) return;
+    if (!user || !orderId) {
+      toast({
+        title: "Erreur",
+        description: "Utilisateur non connecté ou ID de commande manquant.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
+      // Mettre à jour le statut, et assigner le chauffeur et son nom
       await updateOrderStatus(orderId, "accepted", user.uid, user.name);
-      await loadData();
+      await loadData(); // Recharger les données pour rafraîchir les listes
       toast({
         title: "Commande acceptée",
-        description: `Vous avez accepté la commande ${orderId.slice(-6)}`,
+        description: `Vous avez accepté la commande #${orderId.slice(-6)}.`,
       });
     } catch (error) {
       console.error("Erreur lors de l'acceptation:", error);
       toast({
         title: "Erreur",
-        description: "Impossible d'accepter la commande",
+        description: "Impossible d'accepter la commande. Veuillez réessayer.",
         variant: "destructive",
       });
     }
   };
 
   const handleCompleteOrder = async (orderId: string | undefined) => {
-    if (!orderId) return;
+    if (!orderId) {
+      toast({
+        title: "Erreur",
+        description: "ID de commande manquant.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       await updateOrderStatus(orderId, "completed");
-      await loadData();
+      await loadData(); // Recharger les données pour rafraîchir les listes
       toast({
         title: "Commande terminée",
-        description: `La commande ${orderId.slice(-6)} a été marquée comme terminée`,
+        description: `La commande #${orderId.slice(-6)} a été marquée comme terminée.`,
       });
     } catch (error) {
       console.error("Erreur lors de la finalisation:", error);
       toast({
         title: "Erreur",
-        description: "Impossible de finaliser la commande",
+        description: "Impossible de finaliser la commande. Veuillez réessayer.",
         variant: "destructive",
       });
     }
@@ -161,16 +198,31 @@ export default function DriverDashboard() {
 
   const formatDate = (timestamp: any) => {
     if (!timestamp) return "Date non disponible";
+    // Si c'est un objet Timestamp de Firebase, utilisez toDate()
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString("fr-FR");
+    return date.toLocaleDateString("fr-FR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   if (authLoading || loading) {
-    return <div className="flex items-center justify-center min-h-screen">Chargement...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p>Chargement des données du tableau de bord...</p>
+        </div>
+      </div>
+    );
   }
 
-  if (!user) {
-    return null;
+  // Rediriger si l'utilisateur n'est pas un chauffeur ou non authentifié après chargement
+  if (!user || user.role !== "driver") {
+    return null; // ou un composant de chargement léger avant la redirection
   }
 
   return (
@@ -200,6 +252,28 @@ export default function DriverDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* AI Assistant Card - NOUVELLE SECTION POUR L'IA */}
+        <Card className="mb-8 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 shadow-md">
+          <CardContent className="p-6 flex items-center justify-between">
+            <div className="flex items-center">
+              <Bot className="h-10 w-10 text-blue-600 mr-4" />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Assistant IA Personnel</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Obtenez des informations sur vos trajets, optimisez vos itinéraires et posez vos questions.
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => router.push("/driver/ai-assistant")} // Assurez-vous que cette route existe
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Ouvrir l'assistant
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card>
@@ -254,7 +328,7 @@ export default function DriverDashboard() {
               {availableOrders.length > 0 ? (
                 availableOrders.map((order) =>
                   order.id ? (
-                    <div key={order.id} className="border rounded-lg p-6">
+                    <div key={order.id} className="border rounded-lg p-6 bg-white dark:bg-gray-850 shadow-sm">
                       <div className="flex justify-between items-start mb-4">
                         <div>
                           <h3 className="font-semibold text-lg">#{order.id.slice(-6)}</h3>
@@ -276,35 +350,35 @@ export default function DriverDashboard() {
                               </p>
                             </div>
                           </div>
-                          <div className="flex space-x-2 mt-2">
+                          <div className="flex space-x-2 mt-2 justify-end">
                             {order.urgent && <Badge variant="destructive">Urgent</Badge>}
                             {order.fragile && <Badge variant="secondary">Fragile</Badge>}
                           </div>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 text-sm">
                         <div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">Description:</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{order.description || "Non spécifié"}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Poids: {typeof order.weight === 'string' ? parseFloat(order.weight) : order.weight} kg</p>
+                          <p className="font-medium text-gray-900 dark:text-white">Description:</p>
+                          <p className="text-gray-600 dark:text-gray-400">{order.description || "Non spécifié"}</p>
+                          <p className="text-gray-600 dark:text-gray-400">Poids: {typeof order.weight === 'string' ? parseFloat(order.weight) : order.weight} kg</p>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">Client:</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{order.clientName || "Non spécifié"}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{order.clientPhone || "Non spécifié"}</p>
+                          <p className="font-medium text-gray-900 dark:text-white">Client:</p>
+                          <p className="text-gray-600 dark:text-gray-400">{order.clientName || "Non spécifié"}</p>
+                          <p className="text-gray-600 dark:text-gray-400">{order.clientPhone || "Non spécifié"}</p>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 text-sm">
                         <div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">Collecte:</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{order.pickupAddress || "Non spécifié"}</p>
+                          <p className="font-medium text-gray-900 dark:text-white">Collecte:</p>
+                          <p className="text-gray-600 dark:text-gray-400">{order.pickupAddress || "Non spécifié"}</p>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">Livraison:</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{order.deliveryAddress || "Non spécifié"}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="font-medium text-gray-900 dark:text-white">Livraison:</p>
+                          <p className="text-gray-600 dark:text-gray-400">{order.deliveryAddress || "Non spécifié"}</p>
+                          <p className="text-gray-600 dark:text-gray-400">
                             Destinataire: {order.recipientName || "Non spécifié"} ({order.recipientPhone || "Non spécifié"})
                           </p>
                         </div>
@@ -319,7 +393,11 @@ export default function DriverDashboard() {
               ) : (
                 <div className="text-center py-8">
                   <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 dark:text-gray-400">Aucune commande disponible pour le moment</p>
+                  <p className="text-gray-600 dark:text-gray-400">Aucune commande disponible pour le moment.</p>
+                  <Button className="mt-4" onClick={loadData}>
+                    <Clock className="h-4 w-4 mr-2" /> {/* Changer l'icône pour Recharger */}
+                    Recharger les commandes
+                  </Button>
                 </div>
               )}
             </div>
@@ -330,57 +408,70 @@ export default function DriverDashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Mes commandes</CardTitle>
-            <CardDescription>Commandes que vous avez acceptées</CardDescription>
+            <CardDescription>Commandes que vous avez acceptées ou terminées</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {myOrders.length > 0 ? (
                 myOrders.map((order) =>
                   order.id ? (
-                    <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-4">
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-white">#{order.id.slice(-6)}</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              {order.from || "Non spécifié"} → {order.to || "Non spécifié"}
-                            </p>
+                    <div key={order.id} className="border rounded-lg p-6 bg-white dark:bg-gray-850 shadow-sm">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-lg">#{order.id.slice(-6)}</h3>
+                          <div className="flex items-center text-gray-600 dark:text-gray-400 mt-1 text-sm">
+                            <MapPin className="h-4 w-4 mr-1" />
+                            {order.from || "Non spécifié"} → {order.to || "Non spécifié"}
                           </div>
-                          <div>
-                            <p className="text-sm text-gray-900 dark:text-white">{order.description || "Non spécifié"}</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Client: {order.clientName || "Non spécifié"}</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(order.createdAt)}</p>
-                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            {formatDate(order.createdAt)}
+                          </p>
                         </div>
-                      </div>
-                      <div className="flex items-center space-x-4">
                         <div className="text-right">
-                          <p className="font-medium text-gray-900 dark:text-white">{formatPrice(order.price)}</p>
-                          <div className="text-xs space-y-1">
-                            <p className="text-blue-600">
-                              Vos gains: {formatPrice(calculateDriverEarnings(order.price))}
+                          <p className="font-bold text-lg text-green-600">{formatPrice(order.price)}</p>
+                          <div className="text-xs space-y-1 mt-1">
+                            <p className="text-blue-600 flex items-center justify-end">
+                              <Calculator className="h-3 w-3 mr-1" /> Vos gains: {formatPrice(calculateDriverEarnings(order.price))}
                             </p>
                             <p className="text-red-600">Commission: {formatPrice(calculateCommission(order.price))}</p>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          {(order.status === "accepted" || order.status === "in_progress") && (
-                            <Button variant="outline" size="sm" onClick={() => router.push(`/driver/order/${order.id}`)}>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 text-sm">
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-white">Détails colis:</p>
+                          <p className="text-gray-600 dark:text-gray-400">{order.description || "Non spécifié"}</p>
+                          <p className="text-gray-600 dark:text-gray-400">Poids: {typeof order.weight === 'string' ? parseFloat(order.weight) : order.weight} kg</p>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-white">Client:</p>
+                          <p className="text-gray-600 dark:text-gray-400">{order.clientName || "Non spécifié"}</p>
+                          <p className="text-gray-600 dark:text-gray-400">{order.clientPhone || "Non spécifié"}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end items-center space-x-2 mt-4">
+                        {order.status === "completed" ? (
+                          <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Terminé
+                          </Badge>
+                        ) : (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => router.push(`/driver/order/${order.id}`)}
+                            >
                               <Eye className="h-3 w-3 mr-1" />
-                              Détails
+                              Voir les détails
                             </Button>
-                          )}
-                          {order.status === "completed" ? (
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Terminé
-                            </Badge>
-                          ) : (
                             <Button size="sm" onClick={() => handleCompleteOrder(order.id)}>
                               Marquer comme terminé
                             </Button>
-                          )}
-                        </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   ) : null
@@ -388,13 +479,20 @@ export default function DriverDashboard() {
               ) : (
                 <div className="text-center py-8">
                   <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 dark:text-gray-400">Vous n'avez pas encore accepté de commandes</p>
+                  <p className="text-gray-600 dark:text-gray-400">Vous n'avez pas encore accepté de commandes.</p>
+                  <Button className="mt-4" onClick={() => router.push("/driver/available-orders")}>
+                    Voir les commandes disponibles
+                  </Button>
                 </div>
               )}
             </div>
           </CardContent>
         </Card>
       </main>
+
+      {/* AI Navigation flottante - NOUVEL AJOUT */}
+      {/* Assurez-vous que le composant AINavigation est correctement implémenté */}
+      <AINavigation userRole="driver" />
     </div>
   );
 }

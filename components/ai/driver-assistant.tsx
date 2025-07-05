@@ -1,186 +1,147 @@
-"use client"
+// app/driver/ai-assistant/page.tsx
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { MapPin, Clock, Fuel, MessageCircle, Send, Bot } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import React, { useState, useRef, useEffect } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Send, Car } from "lucide-react"; // Utiliser l'icône Car pour le chauffeur
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
 
 interface Message {
-  id: string
-  content: string
-  isUser: boolean
-  timestamp: Date
-  type?: "route" | "traffic" | "fuel" | "general"
+  id: string;
+  sender: "user" | "bot";
+  text: string;
 }
 
 export default function DriverAssistant() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      content:
-        "Bonjour ! Je suis votre assistant IA. Je peux vous aider avec l'optimisation des routes, les conseils de conduite, et répondre à vos questions sur vos livraisons.",
-      isUser: false,
-      timestamp: new Date(),
-      type: "general",
-    },
-  ])
-  const [input, setInput] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const { toast } = useToast()
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
-  const quickActions = [
-    { label: "Optimiser ma route", icon: MapPin, type: "route" },
-    { label: "Trafic en temps réel", icon: Clock, type: "traffic" },
-    { label: "Conseils carburant", icon: Fuel, type: "fuel" },
-    { label: "Aide générale", icon: MessageCircle, type: "general" },
-  ]
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
-  const handleSendMessage = async (content: string, type?: string) => {
-    if (!content.trim()) return
+  useEffect(scrollToBottom, [messages]);
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content,
-      isUser: true,
-      timestamp: new Date(),
-    }
+  const sendMessage = async () => {
+    if (input.trim() === "") return;
 
-    setMessages((prev) => [...prev, userMessage])
-    setInput("")
-    setIsLoading(true)
+    const userMessage: Message = { id: Date.now().toString(), sender: "user", text: input };
+    setMessages((prevMessages) => [...prevMessages, userMessage]);
+    setInput("");
+    setLoading(true);
 
-    // Simuler une réponse IA basée sur le type de demande
-    setTimeout(() => {
-      let aiResponse = ""
+    try {
+      // Send message to your Next.js API route for drivers
+      const response = await fetch("/api/ai/driver-chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: input, userRole: "driver" }), // Passer le rôle du chauffeur
+      });
 
-      switch (type) {
-        case "route":
-          aiResponse =
-            "🗺️ **Optimisation de route suggérée:**\n\n• Évitez l'A86 entre 7h-9h (embouteillages)\n• Prenez la sortie Porte de Vincennes pour gagner 12 minutes\n• Station-service recommandée: Total Access à 2km\n• Temps estimé: 45 minutes au lieu de 1h02"
-          break
-        case "traffic":
-          aiResponse =
-            "🚦 **Conditions de trafic actuelles:**\n\n• Votre itinéraire principal: Fluide ✅\n• Alternative recommandée: Boulevard périphérique (gain de 8 min)\n• Accident signalé sur A4 - contournement suggéré\n• Prochaine mise à jour dans 15 minutes"
-          break
-        case "fuel":
-          aiResponse =
-            "⛽ **Conseils carburant optimisés:**\n\n• Station la moins chère sur votre route: Leclerc Créteil (-0,08€/L)\n• Consommation prévue: 12,5L pour cette tournée\n• Économie possible: 3,2€ avec conduite éco\n• Prochain plein recommandé: après 2 livraisons"
-          break
-        default:
-          aiResponse = `Je comprends votre demande: "${content}". Voici quelques suggestions:\n\n• Consultez votre planning de livraisons\n• Vérifiez les conditions météo\n• Contactez le support si nécessaire\n• Utilisez les raccourcis rapides ci-dessus`
+      if (!response.ok) {
+        throw new Error("Failed to get response from AI assistant");
       }
 
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: aiResponse,
-        isUser: false,
-        timestamp: new Date(),
-        type: type as any,
-      }
-
-      setMessages((prev) => [...prev, aiMessage])
-      setIsLoading(false)
-    }, 1500)
-  }
-
-  const getMessageTypeColor = (type?: string) => {
-    switch (type) {
-      case "route":
-        return "bg-blue-100 text-blue-800"
-      case "traffic":
-        return "bg-orange-100 text-orange-800"
-      case "fuel":
-        return "bg-green-100 text-green-800"
-      default:
-        return "bg-gray-100 text-gray-800"
+      const data = await response.json();
+      const botMessage: Message = { id: Date.now().toString(), sender: "bot", text: data.reply };
+      setMessages((prevMessages) => [...prevMessages, botMessage]);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast({
+        title: "Erreur IA",
+        description: "Une erreur est survenue lors de la communication avec l'assistant.",
+        variant: "destructive",
+      });
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          id: Date.now().toString(),
+          sender: "bot",
+          text: "Désolé, je rencontre des difficultés pour le moment. Veuillez réessayer plus tard.",
+        },
+      ]);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bot className="h-6 w-6 text-blue-600" />
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+      <Card className="w-full max-w-2xl mx-auto h-[80vh] flex flex-col shadow-xl rounded-lg border-border">
+        <CardHeader className="flex flex-row items-center justify-between pb-3 bg-card border-b border-border rounded-t-lg px-6 py-4">
+          <CardTitle className="text-2xl font-bold flex items-center text-foreground">
+            <Car className="w-7 h-7 mr-3 text-primary" /> {/* Icône de voiture pour le chauffeur */}
             Assistant IA Chauffeur
           </CardTitle>
-          <CardDescription>Votre copilote intelligent pour optimiser vos livraisons</CardDescription>
         </CardHeader>
-      </Card>
-
-      {/* Actions rapides */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Actions rapides</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {quickActions.map((action) => (
-              <Button
-                key={action.type}
-                variant="outline"
-                className="h-auto p-4 flex flex-col items-center gap-2"
-                onClick={() => handleSendMessage(action.label, action.type)}
-              >
-                <action.icon className="h-5 w-5" />
-                <span className="text-xs text-center">{action.label}</span>
-              </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Chat */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Conversation</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4 max-h-96 overflow-y-auto mb-4">
-            {messages.map((message) => (
-              <div key={message.id} className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[80%] p-3 rounded-lg ${
-                    message.isUser ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900"
-                  }`}
-                >
-                  {!message.isUser && message.type && (
-                    <Badge className={`mb-2 ${getMessageTypeColor(message.type)}`}>{message.type}</Badge>
-                  )}
-                  <div className="whitespace-pre-wrap text-sm">{message.content}</div>
-                  <div className="text-xs opacity-70 mt-1">{message.timestamp.toLocaleTimeString()}</div>
-                </div>
+        <CardContent className="flex-grow flex flex-col p-6 bg-background">
+          <ScrollArea className="flex-grow pr-4 mb-4">
+            {messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                <Car className="w-16 h-16 mb-6 text-primary opacity-70 animate-bounce-slow" /> {/* Icône de voiture plus grande et animée */}
+                <p className="text-xl font-semibold mb-2">Bonjour chauffeur ! Comment puis-je vous assister aujourd'hui ?</p>
+                <p className="text-md max-w-sm">Essayez : "Mes prochaines livraisons" ou "Comment optimiser mes gains?"</p>
               </div>
-            ))}
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-gray-100 p-3 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                    <span className="text-sm">L'assistant réfléchit...</span>
+            ) : (
+              <div className="space-y-4">
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${
+                      msg.sender === "user" ? "justify-end" : "justify-start"
+                    }`}
+                  >
+                    <div
+                      className={`max-w-[75%] p-3 rounded-lg shadow-sm ${
+                        msg.sender === "user"
+                          ? "bg-primary text-primary-foreground rounded-br-none" // Coins arrondis sauf en bas à droite
+                          : "bg-secondary text-secondary-foreground rounded-bl-none" // Coins arrondis sauf en bas à gauche
+                      }`}
+                    >
+                      {msg.text}
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
             )}
-          </div>
-
-          <div className="flex gap-2">
+            <div ref={messagesEndRef} />
+          </ScrollArea>
+          <div className="flex items-center gap-2 mt-auto pt-4 border-t border-border">
             <Input
+              placeholder="Écrivez votre message..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Posez votre question..."
-              onKeyPress={(e) => e.key === "Enter" && handleSendMessage(input)}
-              disabled={isLoading}
+              onKeyPress={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
+              disabled={loading}
+              className="flex-grow h-12 rounded-full px-5 border-border focus-visible:ring-primary focus-visible:ring-offset-background"
             />
-            <Button onClick={() => handleSendMessage(input)} disabled={isLoading || !input.trim()} size="icon">
-              <Send className="h-4 w-4" />
+            <Button
+              onClick={sendMessage}
+              disabled={loading || input.trim() === ""}
+              className="h-12 w-12 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-md transition-transform transform hover:scale-105"
+            >
+              {loading ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-foreground"></div>
+              ) : (
+                <Send className="h-5 w-5" />
+              )}
             </Button>
           </div>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
